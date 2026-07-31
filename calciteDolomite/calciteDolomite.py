@@ -24,7 +24,7 @@ initialConditions =  "ic_spc.txt"
 
 if trsptModule == 'pflotran':
     MultiCompoundTransport = True
-    trsptPath = 'pflotran.in'
+    trsptPath = 'pflotran.in' # please open this file to update your database path (line 95)
 elif trsptModule == 'nativeTransport': 
     # native transport is a little 1D transport code i coded.
     initialConditions =  "ic_spc_1d.txt" 
