@@ -7,21 +7,21 @@ import importlib.util
 import os
 import concurrent.futures
 
-from pathlib import Path
-current_dir = Path(__file__).parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+# from pathlib import Path
+# current_dir = Path(__file__).parent
+# if str(current_dir) not in sys.path:
+#     sys.path.insert(0, str(current_dir))
 
-with open("store.txt", 'r', encoding='utf-8') as fichier:
-    inputPath =  fichier.readline().strip() 
-    nameInput =  fichier.readline().strip()
+# with open("store.txt", 'r', encoding='utf-8') as fichier:
+#     inputPath =  fichier.readline().strip() 
+#     nameInput =  fichier.readline().strip()
 
-module_name = os.path.splitext(nameInput)[0]
-file_path = os.path.join(inputPath, nameInput)
-spec = importlib.util.spec_from_file_location(module_name, file_path)
+# module_name = os.path.splitext(nameInput)[0]
+# file_path = os.path.join(inputPath, nameInput)
+# spec = importlib.util.spec_from_file_location(module_name, file_path)
 
-PICCTS_input = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(PICCTS_input)
+# PICCTS_input = importlib.util.module_from_spec(spec)
+# spec.loader.exec_module(PICCTS_input)
 
 def writeTime(tps, arr=2):
     if tps >= 3600 * 24:
@@ -46,42 +46,87 @@ gemsStatus= {
 9: "Terminal error in GEMS3K (e.g., memory corruption). Restart required.",
     }
 
-def speciation_xGEMS(gemsDict,commMtrxPart):
+def speciation_xGEMS(centralDict,commMtrx):
+    ref = time.perf_counter() 
+    engine = xgems.ChemicalEngine(str(centralDict['chemPath']))
+    init = time.perf_counter() - ref
 
-    engine = xgems.ChemicalEngine(gemsDict['chemPath'])
-    commMtrxCoord = commMtrxPart[gemsDict['coord']].copy()
-    commMtrx_species = commMtrxPart.drop(columns=gemsDict['coord']) # To be sure to not change nodes coordinates
-    outputGems = pd.DataFrame(columns=gemsDict['systemSpeciation'])
-
-    dico = {}
-    dico = {spc: [0]*len(commMtrx_species) for spc in gemsDict['independentComponents']}
-
-
-    ligne = 0
-    for _, row in commMtrx_species.iterrows():
-        for comp, conc in row.items():
-            for prim in gemsDict['nonTrivialDC'][comp] :
-                dico[prim][ligne] += gemsDict['nonTrivialDC'][comp][prim] * conc
-        ligne += 1
-
-    commMtrx_primSpecies = pd.DataFrame(dico)
-    commMtrx_primSpecies.index = commMtrx_species.index
+    outputGems = pd.DataFrame(columns=centralDict['systemSpeciation'])
+    MultiCompoundTransport = centralDict['MultiCompoundTransport'] 
     
-    commMtrx_primSpecies = commMtrx_primSpecies.astype(float)
-    commMtrx_primSpecies= commMtrx_primSpecies.clip(lower=1e-16)
+    if centralDict['lStep'] ==0 : # initial conditions are species or IC
+        l = [s for s in list(centralDict['commMtrx'].columns) if s not in (centralDict['coord']+centralDict['speciesByClass']['T']+centralDict['speciesByClass']['W']+centralDict['speciesByClass']['O']+centralDict['speciesByClass']['G'])]
+        if set(l).issubset(centralDict['speciesByClass']['S']):
+            if centralDict['MultiCompoundTransport'] :
+                MultiCompoundTransport = False
+            # else:
+            #     MultiCompoundTransport = True
+        # elif not centralDict['MultiCompoundTransport'] :
+            # MultiCompoundTransport = True
+            # if centralDict['MultiCompoundTransport'] : MultiCompoundTransport = True
+            # else: MultiCompoundTransport = False
+            
+
+    if MultiCompoundTransport :
+        commMtrx_primSpecies = commMtrx.copy()
+        
+        ic_list = centralDict['independentComponents']
+        species_list = commMtrx.columns
+        
+        already_primary = [s for s in species_list if s in ic_list]
+        
+        to_decompose = [s for s in species_list if s not in ic_list]
+        
+        stoich_matrix = pd.DataFrame(0.0, index=to_decompose, columns=ic_list)
+        for comp in to_decompose:
+            for prim, coeff in centralDict['primToSecSpecies'][comp].items():
+                stoich_matrix.at[comp, prim] = coeff
+        
+        decomposed = commMtrx[to_decompose].values @ stoich_matrix.values
+        decomposed_df = pd.DataFrame(decomposed, columns=ic_list, index=commMtrx.index)
+        
+        result_df = pd.DataFrame(0.0, columns=ic_list, index=commMtrx.index)
+        
+        for s in already_primary:
+            result_df[s] += commMtrx[s]
+        
+        result_df += decomposed_df
+        
+        commMtrx_primSpecies = result_df
+        
+
+        
+    else:
+        ic_list = centralDict['independentComponents']
+        species_list = commMtrx.columns  # ordre des espèces tel qu'il apparaît dans outputGems
+        
+        stoich_matrix = pd.DataFrame(
+            0.0,
+            index=species_list,
+            columns=ic_list
+        )
+        
+        for comp in species_list:
+            for prim, coeff in centralDict['primToSecSpecies'][comp].items():
+                stoich_matrix.at[comp, prim] = coeff
+        result = commMtrx.values @ stoich_matrix.values
+        
+        commMtrx_primSpecies = pd.DataFrame(result, columns=ic_list, index=commMtrx.index)
+        
 
     gemsStatusList = []
     gemsIterations = []
-        
+    
+    # print(commMtrx_primSpecies)
+    # sys.exit()
     calcTime = 0
     for index in commMtrx_primSpecies.index:
         ref = time.perf_counter()
         status = engine.equilibrate(
             298,1e5, # to continue ..
             [
-                gemsDict['constantSpecies'][spc] if spc in gemsDict['constantSpecies']
-                else commMtrx_primSpecies.at[index, spc]
-                for spc in gemsDict['independentComponents']
+                commMtrx_primSpecies.at[index, spc]
+                for spc in centralDict['independentComponents']
             ])
         calcTime += time.perf_counter() - ref
             
@@ -89,50 +134,111 @@ def speciation_xGEMS(gemsDict,commMtrxPart):
         gemsStatusList += [status]
         gemsIterations += [engine.numIterations()]
         
-    outputGems.index = commMtrx_species.index
-    outputGems = pd.concat([commMtrxCoord,outputGems], axis=1)
-    
-    return outputGems,commMtrx_primSpecies,gemsStatusList,gemsIterations, calcTime
+    outputGems.index = commMtrx.index
+    # print(outputGems)
+
+    # phase species shall not be decomposed onto IC
+    if centralDict['MultiCompoundTransport']:
+        # multi-component transport
+        
+        outputSpecies = outputGems.copy()
+        ic_list = centralDict['independentComponents']
+        species_list = outputGems.columns
+        
+        stoich_matrix = pd.DataFrame(0.0,index=species_list,columns=ic_list)
+        # print(centralDict['transportedSpecies'])
+        # sys.exit()
+        for comp in (centralDict['transportedSpecies']) : #species_list
+            for prim, coeff in centralDict['primToSecSpecies'][comp].items():
+                stoich_matrix.at[comp, prim] = coeff
+        result = outputGems.values @ stoich_matrix.values
+        
+        outputGems = pd.DataFrame(result, columns=ic_list, index=commMtrx.index)
+        # print(outputGems)
+        outputGems = outputGems.drop(columns=centralDict['fixedSpecies'],errors="ignore")
+        outputGems = pd.concat([outputGems, outputSpecies[centralDict['fixedSpecies'] ]], axis=1)
+        
+        
+        # print(outputGems,'\n',outputSpecies)
+        # sys.exit()
+        
+        
+        
+        # dico = {}
+        # dico = {spc: [0]*len(outputGems) for spc in centralDict['independentComponents']}
+        # ligne = 0
+        # for _, row in outputGems.iterrows():
+        #     for comp, conc in row.items():
+        #         for prim in centralDict['primToSecSpecies'][comp] :
+        #             dico[prim][ligne] += centralDict['primToSecSpecies'][comp][prim] * conc
+        #     ligne += 1
+
+        # outputGems = pd.DataFrame(dico)
+        # outputGems.index = commMtrx.index
+        
+        return outputGems,outputSpecies,gemsStatusList,gemsIterations, calcTime, init
+    else:
+        
+        return outputGems,commMtrx_primSpecies,gemsStatusList,gemsIterations, calcTime, init
 	
 def spct(centralDict): 
     print("xGEMS", end=" ", flush=True)
     startGems = time.time()
-    chunk_size = int(np.ceil(len(centralDict['commMtrx']) / centralDict['PIDnbr']))
-
-    commMtrxSplit = [centralDict['commMtrx'].iloc[i:i + chunk_size] for i in range(0, len(centralDict['commMtrx']), chunk_size)]
-    with concurrent.futures.ProcessPoolExecutor(max_workers=centralDict['PIDnbr']) as executor:
-        futures = []
-        for chunk in commMtrxSplit:
-            futures.append(
-                executor.submit(
-                    speciation_xGEMS,
-                    centralDict,
-                    chunk,
+    
+    
+    
+    if centralDict['crossDependencies'] and centralDict['crossDependencies'].get('speciation'):
+        gemsInput = [s for s in centralDict['commMtrx'].columns if s not in centralDict['coord']] + list(centralDict['crossDependencies']['speciation']['input'])
+    else: 
+        gemsInput = [s for s in centralDict['commMtrx'].columns if s not in centralDict['coord']]
+    
+    # print(gemsInput,centralDict['commMtrx'])
+    # sys.exit()
+    if centralDict['PIDnbr'] > 1:
+    
+        chunk_size = int(np.ceil(len(centralDict['commMtrx']) / centralDict['PIDnbr']))
+    
+        commMtrxSplit = [centralDict['commMtrx'][gemsInput].iloc[i:i + chunk_size] for i in range(0, len(centralDict['commMtrx']), chunk_size)]
+        
+        with concurrent.futures.ProcessPoolExecutor(max_workers=centralDict['PIDnbr']) as executor:
+            futures = []
+            for chunk in commMtrxSplit:
+                futures.append(
+                    executor.submit(
+                        speciation_xGEMS,
+                        centralDict,
+                        chunk,
+                    )
                 )
-            )
-    
-   
-    results = []   
-    
-    results = [f.result() for f in futures]
-
-    df1,df2, status, iteration, intgr2= zip(*results)
-
-    commMtrxPart = pd.concat(df1, ignore_index=True)
-    commMtrx_primSpecies = pd.concat(df2, ignore_index=True)
-    prcsTime = sum(intgr2)
-    
-    gemsStatusList = status[0]
-    gemsIterations = iteration[0]
-
-
-    if centralDict["firstStepEquilibrium"]==True:
-        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['primSpecies'], f"PrimarySpecies_{centralDict['lStep']}.txt"), index=False, header=True, sep='\t')
-        commMtrxPart.to_csv(os.path.join(centralDict['paths']['outputSpeciation'], f"PhreeqC_{centralDict['lStep']}.txt"), index=False, header=True, sep='\t')
-    else:
-        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['primSpecies'], f"PrimarySpecies_{centralDict['lStep']+1}.txt"), index=False, header=True, sep='\t')
-        commMtrxPart.to_csv(os.path.join(centralDict['paths']['outputSpeciation'], f"PhreeqC_{centralDict['lStep']+1}.txt"), index=False, header=True, sep='\t')
+        
        
+        results = []   
+        
+        results = [f.result() for f in futures]
+    
+        output,primSpc, status, iteration, calc, initWorker = zip(*results)
+    
+        commMtrxSpct = pd.concat(output, ignore_index=True)
+        commMtrx_primSpecies = pd.concat(primSpc, ignore_index=True)
+        calcPrcsTime = sum(calc)
+        calcWallClock = max(calc)
+        init = max(initWorker)
+        
+        gemsStatusList = status[0]
+        gemsIterations = iteration[0]
+        
+    else:
+        commMtrxSpct, commMtrx_primSpecies, gemsStatusList, gemsIterations, calcWallClock, init = speciation_xGEMS(centralDict,centralDict['commMtrx'][gemsInput])
+        calcPrcsTime = calcWallClock
+
+    commMtrxSpct = pd.concat([centralDict['commMtrx'][centralDict["anythingButSpecies"]],commMtrxSpct], axis=1)
+    commMtrx_primSpecies = pd.concat([centralDict['commMtrx'][['x', 'y', 'z'][:centralDict['geometry']]],commMtrx_primSpecies], axis=1)
+
+    # commMtrxSpct.columns = centralDict['commMtrx'].columns
+        
+    # print(commMtrxSpct)
+    # sys.exit()
+
     with open("warning.log", "a") as warningLog:
         for i,status in enumerate(gemsStatusList):
             if status!=2:
@@ -141,17 +247,23 @@ def spct(centralDict):
 
     
     if centralDict["firstStepEquilibrium"]==True:
-        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['primSpecies'], f"PrimarySpecies_{centralDict['lStep']}.txt"), index=False, header=True, sep='\t')
+        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['PrimarySpecies'], f"PrimarySpecies_{centralDict['lStep']}.txt"), index=False, header=True, sep='\t')
+        commMtrxSpct.to_csv(os.path.join(centralDict['paths']['Speciation'], f"xGEMS_{centralDict['lStep']}.txt"), index=False, header=True, sep='\t')
     else:
-        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['primSpecies'], f"PrimarySpecies_{centralDict['lStep']+1}.txt"), index=False, header=True, sep='\t')
-
-    print(f"({writeTime((time.time() - startGems))})") 
+        commMtrx_primSpecies.to_csv(os.path.join(centralDict['paths']['PrimarySpecies'], f"PrimarySpecies_{centralDict['lStep']+1}.txt"), index=False, header=True, sep='\t')
+        commMtrxSpct.to_csv(os.path.join(centralDict['paths']['Speciation'], f"xGEMS_{centralDict['lStep']+1}.txt"), index=False, header=True, sep='\t')
+       
     
     centralDict.update({
-        "commMtrx": commMtrxPart,
-        "xGEMSClockTime": centralDict['xGEMSClockTime'] + time.time() - startGems,
-        "xGEMSPrcsTime": centralDict['xGEMSPrcsTime'] + prcsTime,
-        })
+        "commMtrx": commMtrxSpct,
+        "xGEMSCalcTime_WallClock": centralDict["xGEMSCalcTime_WallClock"] + calcWallClock,
+        "xGEMSCalcTime_ProcessorTime": centralDict["xGEMSCalcTime_ProcessorTime"] + calcPrcsTime,
+        "xGEMSInterfTime_WallClock": centralDict["xGEMSInterfTime_WallClock"] + time.time() - startGems - calcWallClock - init,
+        "xGEMSInitTime" : centralDict["xGEMSInitTime"] + init,
+        "xGEMSTotalTime" : centralDict["xGEMSTotalTime"] + time.time() - startGems,})
  
+    
+    print(f"({writeTime((time.time() - startGems))})") 
+
 
     return centralDict

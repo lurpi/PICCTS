@@ -1,0 +1,25 @@
+PICCTS : SNIA xGEMS-PFLOTRAN.
+PICCTS : Description :
+Test pflotran
+PICCTS : Time steps (s) :
+2100.0, 4200.0, 6300.0, 8400.0, 10500.0, 12600.0, 14700.0, 16800.0, 18900.0, 21000.0.
+GEMS, node n°98, time step n°7, t=14700.0s, PID=2954606 : with 22 :
+GEMS, node n°98, time step n°7, t=14700.0s, PID=2954606 : Bad (not fully trustful) result after GEM calculation with LPP AIA
+PICCTS : Coupling completed
+PICCTS : 0 warning(s) have occured during the coupling
+
+PICCTS : Total coupling calculation time : 15.2309598923 sec
+Extract from database : Total interfacing time : 0.0011737347 sec
+xGEMS : Total xGEMS calculation time : 1.5217463970 sec
+PFLOTRAN : Total PFLOTRAN calculation time : 13.6608140469 sec
+
+xGEMS : Wall clock time of total speciation calculation : 0.8386112256 sec
+xGEMS : Processor time of total speciation calculation : 0.8386112256 sec
+xGEMS : Wall clock time of interfacing data : 0.6767956205 sec
+xGEMS : Initialisation time : 0.0063352501 sec
+
+PFLOTRAN : Wall clock time of total speciation calculation : 13.6002118373 sec
+PFLOTRAN : Processor time of total speciation calculation : 13.6002118373 sec
+PFLOTRAN : Wall clock time of interfacing data : 0.0000000000 sec
+
+PICCTS : Interfacing time from PICCTS coupler : 0.0484175682 sec

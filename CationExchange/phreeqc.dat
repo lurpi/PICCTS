@@ -212,7 +212,6 @@ HS- + H+ = H2S
 	delta_h -5.300  kcal
 	-analytical  -11.17   0.02386  3279.0
 	-dw	 2.1e-9
-
 NO3- + 2 H+ + 2 e- = NO2- + H2O
 	log_k	   28.570
 	delta_h -43.760 kcal

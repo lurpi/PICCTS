@@ -5,10 +5,8 @@ import streamlit as st
 import altair as alt
 from io import StringIO
 
-pd.set_option('display.max_columns', 20)
-pd.set_option('display.max_rows', 10)
+dossier = "/media/al274877/EMTEC C350/calDoloPflotran/Speciation" # insert path leading to Speciation/primarySpecies/couplingHistory folder
 
-folder = "...\outputSpeciation" # edit your path so that it points to the outputHistory outputSpeciation folder.
 
 st.set_page_config(layout="wide")
 alt.data_transformers.disable_max_rows()
@@ -17,21 +15,21 @@ def extraire_numero(nom_fichier):
     match = re.search(r'(\d+)', nom_fichier)
     return int(match.group(1)) if match else float("inf")
 
-@st.cache_data(show_spinner="Reading files ...")
-def charger_sorties(folder):
-    if not os.path.exists(folder):
-        st.error("folder introuvable")
+@st.cache_data(show_spinner="reading output file...")
+def charger_sorties(dossier):
+    if not os.path.exists(dossier):
+        st.error("Folder not found")
         return []
 
     fichiers_txt = sorted(
-        [f for f in os.listdir(folder) if f.endswith(".txt")],
+        [f for f in os.listdir(dossier) if f.endswith(".txt")],
         key=extraire_numero
     )
 
     dfs = []
 
     for i, nom_fichier in enumerate(fichiers_txt):
-        chemin = os.path.join(folder, nom_fichier)
+        chemin = os.path.join(dossier, nom_fichier)
 
         df = pd.read_csv(
             chemin,
@@ -49,21 +47,21 @@ def charger_sorties(folder):
     return dfs
 
 
-df_sortiePhreeqC = charger_sorties(folder)
+df_output = charger_sorties(dossier)
 
-if not df_sortiePhreeqC:
+if not df_output:
     st.stop()
 
-st.title("Spatial profile PICCTS")
+st.title("Spatial profile")
 
 index_df = st.slider(
-    "Choose your time step",
+    "Select time step",
     0,
-    len(df_sortiePhreeqC) - 1,
+    len(df_output) - 1,
     0
 )
 
-df_selected = df_sortiePhreeqC[index_df]
+df_selected = df_output[index_df]
 
 all_columns = [col for col in df_selected.columns if col not in ['t', 'x']]
 
@@ -74,7 +72,7 @@ cols_to_plot = st.multiselect(
 )
 
 if not cols_to_plot:
-    st.warning("Please select a species.")
+    st.warning("Pls select at least one species.")
     st.stop()
 
 plot_data = []
@@ -91,9 +89,14 @@ for col in cols_to_plot:
 
 plot_df = pd.DataFrame(plot_data)
 
+log_scale = st.toggle("Log. scale", value=False)
+if log_scale:  # filtrer uniquement si log activé
+    plot_df = plot_df[plot_df["value"] > 0]
+scale_type = "log" if log_scale else "linear"
+
 chart = alt.Chart(plot_df).mark_line().encode(
-    x=alt.X("x", title="Position"),
-    y=alt.Y("value", title="Valeur"),
+    x=alt.X("x", title="x (m)"),
+    y=alt.Y("value", title="Concentration (mol/kgw)", scale=alt.Scale(type=scale_type)),
     color="column",
     tooltip=["column", "x", "value"]
 ).interactive()
@@ -104,8 +107,8 @@ csv_buffer = StringIO()
 plot_df.to_csv(csv_buffer, index=False)
 
 st.download_button(
-    label="Download data in .csv",
+    label="Download data",
     data=csv_buffer.getvalue(),
-    file_name="spatialProfile.csv",
+    file_name="picctsOutput.csv",
     mime="text/csv"
 )
