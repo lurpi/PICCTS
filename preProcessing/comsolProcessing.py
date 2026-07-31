@@ -13,8 +13,8 @@ interfaceLong = {'tds': 'DilutedSpecies',
                  # 'tdsPorous': 'DilutedSpeciesInPorousMedia',
                  'npe': 'NernstPlanck'}
 
-systemSpeciation = ['test','test2','testPhase'] # put your speciation here
-fixedSpecies = ['testPhase'] # put all species here
+systemSpeciation = ['species+1','species-2','phase'] # put your speciation here
+fixedSpecies = ['phase'] # put all species here
 
 Comsolpath = "comsolProcessing.mph" # put your Comsol path here
 
@@ -98,8 +98,7 @@ for i,spc in enumerate(totalspc, start = geometry+1):
     javamodel.component("comp1").func("int1").setEntry("columnType", f"col{i}", "value");
     javamodel.component("comp1").func("int1").setIndex("fununit", "mol/L", i-geometry-1)
     javamodel.component("comp1").func("int1").setEntry("funcnames", f"col{i}", f"{spc}i")
-# model.save()
-# sys.exit()
+
 model.solve()
 javamodel.result().export().create("data1", "Data")
 javamodel.result().export("data1").setIndex("looplevelinput", "last", 0);
