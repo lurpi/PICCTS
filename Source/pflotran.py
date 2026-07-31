@@ -24,33 +24,9 @@ def writeTime(tps, arr=2):
 def transport(centralDict):
     'write datasets, launch pflotran, read output file'
     
-    
-    
-    
-    # species_cols = centralDict['systemSpeciation']
-    # prim_species = centralDict['primarySpecies']
-    
-    # print(prim_species)
-    
-    # stoich = pd.DataFrame(0.0, index=species_cols, columns=prim_species)
-    # for comp in species_cols:
-    #     for prim, coef in centralDict['primToSecSpecies'][comp].items():
-    #         stoich.loc[comp, prim] = coef
-    
-    
-    # print(stoich)
-    # sys.exit()
-    # commMtrx_primSpecies = pd.DataFrame(
-    #     centralDict['commMtrx'][centralDict['systemSpeciation']].to_numpy() @ stoich.to_numpy(),
-    #     columns=prim_species
-    # )
-    
-    # print(commMtrx_primSpecies)
-    # print(centralDict['commMtrx'])
-    
+
     trsptSpc = [s for s in centralDict['commMtrx'].columns if s not in (centralDict['fixedSpecies']+["Zz"]+centralDict['coord'])]
-    # print(trsptSpc )
-    # sys.exit()
+
     spcArray = {col: centralDict['commMtrx'][col].to_numpy() for col in centralDict['commMtrx'].columns if col in trsptSpc}
 
 
@@ -59,7 +35,6 @@ def transport(centralDict):
         for s in trsptSpc:
             f.create_dataset(s+'i', data = spcArray[s])
 
-    # sys.exit()
     pflotran = os.path.join(
         os.environ["PFLOTRAN_DIR"],
         "src",
@@ -67,7 +42,6 @@ def transport(centralDict):
         "pflotran"
     )
     
-    # sys.exit()
     with open("pflotran_output.txt", "w") as f:
         ref = time.perf_counter() 
         subprocess.run(
@@ -81,7 +55,6 @@ def transport(centralDict):
     calcTime = time.perf_counter() - ref
     
     pattern = re.compile(r"pflotran-(\d+)\.tec$")
-    # files = [f for f in Path(".").iterdir() if pattern.match(f.name)]
         
     files = [f for f in Path(centralDict['trsptPath'].parent).iterdir() if pattern.match(f.name)] # will catch the highest one .. may be a probleme in the future
     
@@ -112,15 +85,11 @@ def transport(centralDict):
         names=variables,
         engine="python"
     )
-    
-    # print(df,centralDict['commMtrx'])
-    # sys.exit()
+
     df = df.drop(columns="Material ID")
     df.columns = centralDict['coord'] + trsptSpc
     df = pd.concat([df,centralDict['commMtrx'][centralDict['fixedSpecies']]], axis = 1)
-    # print(centralDict['fixedSpecies'])
-    # print(df)
-    # sys.exit()
+
     return df, calcTime
 
 
@@ -156,16 +125,6 @@ def trspt(centralDict):
         comm, calcWallClock = transport(centralDict)
         calcPrcsTime = calcWallClock
     
-    
-    # comm = pd.concat([comm,centralDict['commMtrx'].drop(columns=(centralDict['coord']+centralDict['transportedSpecies']))], axis = 1)
-    # comm.columns = centralDict['commMtrx'].columns
-    
-    
-    # commMtrxSpct = pd.concat([centralDict['commMtrx'][centralDict["anythingButSpecies"]],commMtrxSpct], axis=1)
-    # commMtrx_primSpecies = pd.concat([centralDict['commMtrx'][['x', 'y', 'z'][:centralDict['geometry']]],commMtrx_primSpecies], axis=1)
-    # commMtrxSpct.columns = centralDict['commMtrx'].columns
-    # print(comm)
-    # sys.exit()
     
     centralDict.update({
         "commMtrx": comm,
