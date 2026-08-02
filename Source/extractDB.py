@@ -96,8 +96,8 @@ def decomposingIntoPrimSpecies(formula, primarySpecies,redoxPrim,redox_dict):
         if token[0] == 'master':
             if charge : species = formula + charge
             else: species = formula
-            
-            if redox_dict and redoxPrim and token[1] in redox_dict:
+
+            if redox_dict and token[1] in redox_dict:
                 for key in redox_dict[token[1]]:
                     if key in redoxPrim:
                         for sec in redoxPrim[key]:
@@ -598,22 +598,10 @@ def gemsDBextraction(centralDict):
 
     return centralDict
 
-def orchestraDBextraction(centralDict):
-    print("Extracting from ORCHESTRA (PhreeqC-like) database", end=" ", flush=True)
-    speciesAttributes = {}
-    if not centralDict['speciesAttributes'] : 
-        print('please insert species attributess ...')
-        sys.exit()
-    for ky in centralDict['speciesAttributes'].keys():
-        if isinstance(centralDict['speciesAttributes'][ky], dict) : 
-            for subkey in centralDict['speciesAttributes'][ky]:
-                speciesAttributes[subkey] = f"{centralDict['speciesAttributes'][ky][subkey]}.{ky}"
-        else:
-            for spc in centralDict['systemSpeciation']:
-                if spc in centralDict['speciesAttributes'][ky]:
-                    speciesAttributes[spc] = f"{spc}.{ky}"
-                    continue
-
+def OrchestraDBextraction(centralDict):
+    print("Extracting ORCHESTRA database", end=" ", flush=True)
+    
+    
     primToSecSpecies = {}
     for _, row in centralDict['commMtrx'][centralDict['systemSpeciation']].iterrows():
         for comp, conc in row.items():
@@ -621,19 +609,17 @@ def orchestraDBextraction(centralDict):
                 print("\nTypeError: '<' not supported between instances of 'str' and 'int'")
                 print(conc,comp)
                 sys.exit()
-            composition, _ = decomposingIntoPrimSpecies(comp, centralDict['primarySpecies'][-1], None, None)
+            composition, _ = decomposingIntoPrimSpecies(comp, centralDict['primarySpecies'][-1], None,None)
             primToSecSpecies.update({comp : composition})
 
-    centralDict.update({"primToSecSpecies" : primToSecSpecies,
-                        "inputVariableOrchestra" : [f"{spc}.tot" for spc in centralDict['primarySpecies'][-1]],
-                        "outputVariableOrchestra" : [f"{speciesAttributes[spc]}" for spc in centralDict['systemSpeciation']],})
+    centralDict.update({"primToSecSpecies" : primToSecSpecies,})
     return centralDict
 
 
 def extract(centralDict):
     startExtract = time.time()
     
-
+    # calling db functions shall be generic ...
     if centralDict['PIDextract'] > 1 and centralDict['couplingInfo'][1] == 'PhreeqC':
         print("Extracting PhreeqC database", end=" ", flush=True)
         chunk_size = int(np.ceil(len(centralDict['commMtrx']) / centralDict['PIDextract']))
@@ -664,11 +650,12 @@ def extract(centralDict):
         print("Extracting PhreeqC database", end=" ", flush=True)
         primToSecSpecies, sol, phases, surf, exch, fixed, trspt = phreeqcDBextraction(centralDict,centralDict['commMtrx'][centralDict['systemSpeciation']])
 
+    elif centralDict['couplingInfo'][1] == 'ORCHESTRA':
+        centralDict.update(OrchestraDBextraction(centralDict))
+
     elif centralDict['couplingInfo'][1] == 'xGEMS':
         centralDict.update(gemsDBextraction(centralDict))
     
-    elif centralDict['couplingInfo'][1] == 'ORCHESTRA':
-        centralDict.update(orchestraDBextraction(centralDict))
     
     if centralDict['couplingInfo'][1] == 'PhreeqC':
 

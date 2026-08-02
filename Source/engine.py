@@ -407,14 +407,27 @@ def main():
 
         
     elif centralDict["couplingInfo"][1] == 'ORCHESTRA':
-
         import orchestra
+
+        
+        
         speciationLauncher = {
             'ORCHESTRA': orchestra.spct}
         
+        speciesAttributes = {}
+        dico = getattr(PICCTS_input, 'speciesAttributes', { })
+        for ky in dico.keys():
+            if isinstance(dico[ky], dict) : 
+                for subkey in dico[ky]:
+                    speciesAttributes[subkey] = f"{dico[ky][subkey]}.{ky}"
+            else:
+                for spc in centralDict['systemSpeciation']:
+                    if spc in dico[ky]:
+                        speciesAttributes[spc] = f"{spc}.{ky}"
+                        continue
         
+
         centralDict.update({
-        "speciesAttributes" :  getattr(PICCTS_input, 'speciesAttributes', { }), # needs to be retrieved from db
         "chemPath" : Path(getattr(PICCTS_input, 'chemPath', os.path.join(pathPicctsInput, 'chemistry1.inp'))),
         "primarySpecies" : [getattr(PICCTS_input, "primarySpeciesAq", []),
                            getattr(PICCTS_input, "primarySpeciesPha", []),
@@ -432,14 +445,15 @@ def main():
         "ORCHESTRAInitTime" : 0,
         "ORCHESTRATotalTime" : 0,
         "transportedSpecies" :  getattr(PICCTS_input, "transportedSpecies"),
-
         })
-        import extractDB
         
+        import extractDB
         centralDict.update(extractDB.extract(centralDict))
         
-
-
+        centralDict.update({
+        "inputVariableOrchestra" : [f"{spc}.tot" for spc in centralDict['primarySpecies'][-1]],
+        "outputVariableOrchestra" : [f"{speciesAttributes[spc]}" for spc in centralDict['systemSpeciation']],
+            })
 
     else: 
         print(f'No module is associated with chemModule = {getattr(PICCTS_input, "chemModule", 1)}')
