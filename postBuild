@@ -134,14 +134,14 @@ cd "${PFLOTRAN_DIR}"
 
 # PFLOTRAN v6.0 was released in August 2024.
 # Use the v6.0 tag when available.
-git fetch --tags
-
-if git rev-parse --verify "refs/tags/v6.0" >/dev/null 2>&1; then
-    git checkout --force v6.0
-else
-    echo "WARNING: PFLOTRAN v6.0 tag was not found."
-    echo "Using the current PFLOTRAN repository revision."
-fi
+####git fetch --tags
+####
+####if git rev-parse --verify "refs/tags/v6.0" >/dev/null 2>&1; then
+####    git checkout --force v6.0
+####else
+####    echo "WARNING: PFLOTRAN v6.0 tag was not found."
+####    echo "Using the current PFLOTRAN repository revision."
+####fi
 
 # ------------------------------------------------------------------
 # Make PETSc available to PFLOTRAN
