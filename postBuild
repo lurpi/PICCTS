@@ -21,7 +21,7 @@ mkdir -p "${WORKDIR}"
 
 if [ ! -d "${PETSC_DIR}/.git" ]; then
     echo "Cloning PETSc..."
-    git clone --depth 1 --branch v3.13 \
+    git clone --depth 1 --branch v3.24.5 \
         https://gitlab.com/petsc/petsc.git \
         "${PETSC_DIR}"
 else
@@ -137,6 +137,17 @@ fi
 
 export PETSC_DIR="${PETSC_DIR}"
 export PETSC_ARCH="${PETSC_ARCH}"
+
+# check to ensure that PETSC_DIR and PETSC_ARCH are set
+if [ -z "$PETSC_DIR" ]; then
+  echo "Need to set PETSC_DIR"
+  exit 1
+fi
+
+echo PETSC_DIR_LOC=${PETSC_DIR}  
+echo PETSC_ARCH_LOC=${PETSC_ARCH}
+echo PFLOTRAN_DIR_LOC=${PWD}
+echo PREFIX_LOC=${PREFIX}
 
 # ------------------------------------------------------------------
 # Build PFLOTRAN
