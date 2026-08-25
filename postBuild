@@ -184,17 +184,17 @@ ls -lh "${PFLOTRAN_EXE}"
 ####mkdir -p "${CONDA_PREFIX}/etc/conda/activate.d"
 
 ####cat > "${CONDA_PREFIX}/etc/conda/activate.d/pflotran.sh" <<EOF
-export PETSC_DIR="${PETSC_DIR}"
-export PETSC_ARCH="${PETSC_ARCH}"
-export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
-export PATH="${MPI_BIN:-\$PATH}:\$PATH"
+####export PETSC_DIR="${PETSC_DIR}"
+####export PETSC_ARCH="${PETSC_ARCH}"
+####export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
+####export PATH="${MPI_BIN:-\$PATH}:\$PATH"
 ####EOF
 
 # Also create a convenient shell configuration.
 ####cat > "${HOME}/.pflotran_environment" <<EOF
-export PETSC_DIR="${PETSC_DIR}"
-export PETSC_ARCH="${PETSC_ARCH}"
-export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
+####export PETSC_DIR="${PETSC_DIR}"
+####export PETSC_ARCH="${PETSC_ARCH}"
+####export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
 ####EOF
 
 # ------------------------------------------------------------------
@@ -204,8 +204,8 @@ export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
 echo "Adding PICCTS Source directory to Python path..."
 
 ####cat > "${CONDA_PREFIX}/etc/conda/activate.d/piccts.sh" <<EOF
-export PICCTS_DIR="${HOME}"
-export PYTHONPATH="${HOME}/Source:\$PYTHONPATH"
+####export PICCTS_DIR="${HOME}"
+####export PYTHONPATH="${HOME}/Source:\$PYTHONPATH"
 ####EOF
 
 # ------------------------------------------------------------------
