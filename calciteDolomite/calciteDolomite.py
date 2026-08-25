@@ -39,10 +39,10 @@ elif trsptModule == 'nativeTransport':
 elif trsptModule == 'comsol':
     trsptPath = "calciteDolomite.mph"
 
-chemPath =r'.../Resources/CalciteIC/CalciteIC-dat.lst'
+chemPath =r'../Resources/CalciteIC/CalciteIC-dat.lst'
 
     
-enginePath = ".../Source"
+enginePath = "../Source"
 
 if __name__ == "__main__":
     spec = importlib.util.spec_from_file_location("engine", os.path.join(enginePath, "engine.py"))
