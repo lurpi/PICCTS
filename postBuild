@@ -211,7 +211,7 @@ echo "Adding PICCTS Source directory to Python path..."
 # ------------------------------------------------------------------
 # Final diagnostics
 # ------------------------------------------------------------------
-g
+
 echo ""
 echo "=============================================="
 echo " PFLOTRAN/PICCTS build completed"
