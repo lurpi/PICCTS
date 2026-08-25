@@ -1,0 +1,229 @@
+#!/bin/bash
+set -euxo pipefail
+
+echo "=============================================="
+echo " Building PFLOTRAN/PICCTS Binder environment"
+echo "=============================================="
+
+# ------------------------------------------------------------------
+# Locations
+# ------------------------------------------------------------------
+
+export WORKDIR="${HOME}/pflotran-binder"
+export PETSC_DIR="${WORKDIR}/petsc"
+export PFLOTRAN_DIR="${WORKDIR}/pflotran"
+
+mkdir -p "${WORKDIR}"
+
+# ------------------------------------------------------------------
+# PETSc 3.24.5
+# ------------------------------------------------------------------
+
+if [ ! -d "${PETSC_DIR}/.git" ]; then
+    echo "Cloning PETSc..."
+    git clone --depth 1 --branch v3.24.5 \
+        https://gitlab.com/petsc/petsc.git \
+        "${PETSC_DIR}"
+else
+    echo "PETSc already exists."
+fi
+
+cd "${PETSC_DIR}"
+
+# PETSc architecture name
+export PETSC_ARCH="binder-gnu"
+
+# Configure PETSc following the PFLOTRAN v6.0 Linux instructions.
+#
+# PETSc downloads:
+#   MPICH
+#   HDF5
+#   HDF5 Fortran bindings
+#   BLAS/LAPACK
+#   METIS
+#   ParMETIS
+#
+# zlib is enabled for HDF5 compression.
+
+if [ ! -f "${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables" ]; then
+
+    echo "Configuring PETSc..."
+
+    ./configure \
+        PETSC_ARCH="${PETSC_ARCH}" \
+        --COPTFLAGS="-O3" \
+        --CXXOPTFLAGS="-O3" \
+        --FOPTFLAGS="-O3 -Wno-unused-function" \
+        --with-debugging=no \
+        --download-mpich=yes \
+        --download-hdf5=yes \
+        --download-hdf5-fortran-bindings=yes \
+        --download-fblaslapack=yes \
+        --download-metis=yes \
+        --download-parmetis=yes \
+        --download-hdf5-configure-arguments="--with-zlib=yes"
+
+else
+
+    echo "PETSc is already configured."
+
+fi
+
+# ------------------------------------------------------------------
+# Build PETSc
+# ------------------------------------------------------------------
+
+echo "Building PETSc..."
+
+make \
+    PETSC_DIR="${PETSC_DIR}" \
+    PETSC_ARCH="${PETSC_ARCH}" \
+    all
+
+# ------------------------------------------------------------------
+# Find the MPI installation used by PETSc
+# ------------------------------------------------------------------
+
+echo "Locating MPI..."
+
+MPIEXEC_PATH="$(find "${PETSC_DIR}" \
+    -type f \
+    -name mpiexec \
+    -perm -111 \
+    | head -n 1 || true)"
+
+if [ -n "${MPIEXEC_PATH}" ]; then
+    MPI_BIN="$(dirname "${MPIEXEC_PATH}")"
+    export PATH="${MPI_BIN}:${PATH}"
+    echo "Using MPI from: ${MPI_BIN}"
+else
+    echo "WARNING: PETSc mpiexec was not automatically located."
+fi
+
+# ------------------------------------------------------------------
+# PFLOTRAN v6.0
+# ------------------------------------------------------------------
+
+if [ ! -d "${PFLOTRAN_DIR}/.git" ]; then
+
+    echo "Cloning PFLOTRAN..."
+
+    git clone \
+        https://bitbucket.org/pflotran/pflotran \
+        "${PFLOTRAN_DIR}"
+
+else
+
+    echo "PFLOTRAN already exists."
+
+fi
+
+cd "${PFLOTRAN_DIR}"
+
+# PFLOTRAN v6.0 was released in August 2024.
+# Use the v6.0 tag when available.
+git fetch --tags
+
+if git rev-parse --verify "refs/tags/v6.0" >/dev/null 2>&1; then
+    git checkout --force v6.0
+else
+    echo "WARNING: PFLOTRAN v6.0 tag was not found."
+    echo "Using the current PFLOTRAN repository revision."
+fi
+
+# ------------------------------------------------------------------
+# Make PETSc available to PFLOTRAN
+# ------------------------------------------------------------------
+
+export PETSC_DIR="${PETSC_DIR}"
+export PETSC_ARCH="${PETSC_ARCH}"
+
+# ------------------------------------------------------------------
+# Build PFLOTRAN
+# ------------------------------------------------------------------
+
+echo "Building PFLOTRAN..."
+
+cd "${PFLOTRAN_DIR}/src/pflotran"
+
+make clean || true
+
+make -j2 pflotran
+
+# ------------------------------------------------------------------
+# Verify executable
+# ------------------------------------------------------------------
+
+PFLOTRAN_EXE="${PFLOTRAN_DIR}/src/pflotran/pflotran"
+
+if [ ! -x "${PFLOTRAN_EXE}" ]; then
+    echo "ERROR: PFLOTRAN executable was not created."
+    exit 1
+fi
+
+echo "PFLOTRAN executable:"
+ls -lh "${PFLOTRAN_EXE}"
+
+# ------------------------------------------------------------------
+# Persist environment variables for Binder users
+# ------------------------------------------------------------------
+
+mkdir -p "${CONDA_PREFIX}/etc/conda/activate.d"
+
+cat > "${CONDA_PREFIX}/etc/conda/activate.d/pflotran.sh" <<EOF
+export PETSC_DIR="${PETSC_DIR}"
+export PETSC_ARCH="${PETSC_ARCH}"
+export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
+export PATH="${MPI_BIN:-\$PATH}:\$PATH"
+EOF
+
+# Also create a convenient shell configuration.
+cat > "${HOME}/.pflotran_environment" <<EOF
+export PETSC_DIR="${PETSC_DIR}"
+export PETSC_ARCH="${PETSC_ARCH}"
+export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
+EOF
+
+# ------------------------------------------------------------------
+# Install PICCTS source as an importable package path
+# ------------------------------------------------------------------
+
+echo "Adding PICCTS Source directory to Python path..."
+
+cat > "${CONDA_PREFIX}/etc/conda/activate.d/piccts.sh" <<EOF
+export PICCTS_DIR="${HOME}"
+export PYTHONPATH="${HOME}/Source:\$PYTHONPATH"
+EOF
+
+# ------------------------------------------------------------------
+# Final diagnostics
+# ------------------------------------------------------------------
+
+echo ""
+echo "=============================================="
+echo " PFLOTRAN/PICCTS build completed"
+echo "=============================================="
+
+echo "PETSC_DIR=${PETSC_DIR}"
+echo "PETSC_ARCH=${PETSC_ARCH}"
+echo "PFLOTRAN_DIR=${PFLOTRAN_DIR}"
+
+echo ""
+echo "MPI:"
+which mpiexec || true
+mpiexec --version || true
+
+echo ""
+echo "PFLOTRAN:"
+"${PFLOTRAN_EXE}" -version || true
+
+echo ""
+echo "Python:"
+python --version
+
+echo ""
+echo "h5py:"
+python -c "import h5py; print(h5py.__version__)"
+
+echo ""
+echo "=============================================="
