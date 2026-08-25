@@ -1,0 +1,8 @@
+git
+gfortran
+gcc
+g++
+make
+cmake
+pkg-config
+zlib1g-dev
