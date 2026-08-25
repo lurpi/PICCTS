@@ -21,7 +21,7 @@ mkdir -p "${WORKDIR}"
 
 if [ ! -d "${PETSC_DIR}/.git" ]; then
     echo "Cloning PETSc..."
-    git clone --depth 1 --branch v3.21 \
+    git clone --depth 1 --branch v3.13 \
         https://gitlab.com/petsc/petsc.git \
         "${PETSC_DIR}"
 else
