@@ -195,7 +195,7 @@ EOF
 export PETSC_DIR="${PETSC_DIR}"
 export PETSC_ARCH="${PETSC_ARCH}"
 export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
-EOF
+####EOF
 
 # ------------------------------------------------------------------
 # Install PICCTS source as an importable package path
@@ -206,7 +206,7 @@ echo "Adding PICCTS Source directory to Python path..."
 ####cat > "${CONDA_PREFIX}/etc/conda/activate.d/piccts.sh" <<EOF
 export PICCTS_DIR="${HOME}"
 export PYTHONPATH="${HOME}/Source:\$PYTHONPATH"
-EOF
+####EOF
 
 # ------------------------------------------------------------------
 # Final diagnostics
