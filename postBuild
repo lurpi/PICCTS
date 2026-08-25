@@ -147,7 +147,8 @@ fi
 echo PETSC_DIR_LOC=${PETSC_DIR}  
 echo PETSC_ARCH_LOC=${PETSC_ARCH}
 echo PFLOTRAN_DIR_LOC=${PWD}
-echo PREFIX_LOC=${PREFIX}
+# echo PREFIX_LOC=${PREFIX} #PREFIX unbound variable??
+make PETSC_DIR=/home/jovyan/pflotran-binder/petsc PETSC_ARCH=binder-gnu check
 
 # ------------------------------------------------------------------
 # Build PFLOTRAN
