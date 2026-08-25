@@ -1,0 +1,11 @@
+name: PICCTS
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - xgems=2.1.1
+  - matplotlib
+  - openpyxl
+  - jupyter
