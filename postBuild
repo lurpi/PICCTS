@@ -188,7 +188,7 @@ export PETSC_DIR="${PETSC_DIR}"
 export PETSC_ARCH="${PETSC_ARCH}"
 export PFLOTRAN_DIR="${PFLOTRAN_DIR}"
 export PATH="${MPI_BIN:-\$PATH}:\$PATH"
-EOF
+####EOF
 
 # Also create a convenient shell configuration.
 ####cat > "${HOME}/.pflotran_environment" <<EOF
