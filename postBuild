@@ -80,6 +80,18 @@ make \
     PETSC_ARCH="${PETSC_ARCH}" \
     all
 
+# check to ensure that PETSC_DIR and PETSC_ARCH are set
+if [ -z "$PETSC_DIR" ]; then
+  echo "Need to set PETSC_DIR"
+  exit 1
+fi
+
+echo PETSC_DIR_LOC=${PETSC_DIR}  
+echo PETSC_ARCH_LOC=${PETSC_ARCH}
+echo PFLOTRAN_DIR_LOC=${PWD}
+# echo PREFIX_LOC=${PREFIX} #PREFIX unbound variable??
+make PETSC_DIR=/home/jovyan/pflotran-binder/petsc PETSC_ARCH=binder-gnu check
+
 # ------------------------------------------------------------------
 # Find the MPI installation used by PETSc
 # ------------------------------------------------------------------
@@ -138,17 +150,6 @@ fi
 export PETSC_DIR="${PETSC_DIR}"
 export PETSC_ARCH="${PETSC_ARCH}"
 
-# check to ensure that PETSC_DIR and PETSC_ARCH are set
-if [ -z "$PETSC_DIR" ]; then
-  echo "Need to set PETSC_DIR"
-  exit 1
-fi
-
-echo PETSC_DIR_LOC=${PETSC_DIR}  
-echo PETSC_ARCH_LOC=${PETSC_ARCH}
-echo PFLOTRAN_DIR_LOC=${PWD}
-# echo PREFIX_LOC=${PREFIX} #PREFIX unbound variable??
-make PETSC_DIR=/home/jovyan/pflotran-binder/petsc PETSC_ARCH=binder-gnu check
 
 # ------------------------------------------------------------------
 # Build PFLOTRAN
