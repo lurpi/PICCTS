@@ -7,3 +7,8 @@ Please run first the test cases (CationExchange based on ex.11 of PhreeqC from A
 
 
 Do not hesitate to contact me ! (anatole.lafond [at] cea.fr)
+
+
+Now available for testing purposes in an online Jupyter notebook (no log required):
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/lurpi/PICCTS/bind-pflotran?urlpath=%2Fdoc%2Ftree%2FREADME.md)
+
