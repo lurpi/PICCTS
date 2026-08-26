@@ -109,7 +109,8 @@ if [ -n "${MPIEXEC_PATH}" ]; then
     export PATH="${MPI_BIN}:${PATH}"
     echo "Using MPI from: ${MPI_BIN}"
 else
-    echo "WARNING: PETSc mpiexec was not automatically located."
+    echo "WARNING: PETSc mpiexec was not automatically located. Manually inserted"
+    export PATH="/home/jovyan/pflotran-binder/petsc/binder-gnu/bin:${PATH}"
 fi
 
 # ------------------------------------------------------------------
