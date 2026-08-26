@@ -92,7 +92,7 @@ CHEMISTRY
   #  /
   #/
   #DATABASE /volatile/home/al274877/PICCTS/databasePflotran/hanford.dat
-  DATABASE /volatile/home/al274877/PICCTS/databasePflotran/baitDB.txt
+  DATABASE ../databasePflotran/baitDB.txt
   LOG_FORMULATION
   ACTIVITY_COEFFICIENTS ! NEWTON_ITERATION
   MOLAL
